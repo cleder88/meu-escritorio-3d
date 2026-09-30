@@ -1,9 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
-import io
-import requests
 import json
+from openai import OpenAI
 
 # Configuração da página e layout expandido
 st.set_page_config(layout="wide", page_title="Minha Secretária Virtual - Helena")
@@ -21,7 +20,7 @@ endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://use
 modelo_ia = st.sidebar.text_input("ID do Modelo:", value="chatgpt-5.6-terra")
 
 st.sidebar.write("---")
-st.sidebar.info("**Agente Ativo:** Helena - Secretária Executiva\n\nResponsável pela organização da sua agenda de compromissos, triagem de horários e lembretes estruturados.")
+st.sidebar.info("**Agente Ativo:** Helena - Secretária Executiva\n\nResponsável pela organização da sua agenda de compromissos.")
 
 # 2. TELA CENTRAL - CENÁRIO INTERATIVO 3D + CAPTURA DE VOZ CONTÍNUA
 st.title("🖥️ Helena — Sua Secretária Executiva Virtual")
@@ -93,52 +92,29 @@ html_voice_and_3d = f"""
 """
 components.html(html_voice_and_3d, height=270)
 
-# --- REQUISIÇÃO PARA O GATEWAY USEONEAI ---
+# --- REQUISIÇÃO USANDO A BIBLIOTECA OFICIAL OPENAI ---
 def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     if not api_key:
         return "⚠️ Insira a API Key na barra lateral."
     
-    base_url = endpoint_url.strip().rstrip('/')
-    url_completa = f"{base_url}/chat/completions"
-    
-    headers = {
-        "Authorization": f"Bearer {api_key.strip()}",
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0"
-    }
-    payload = {
-        "model": modelo_ia.strip(),
-        "messages": [
-            {"role": "system", "content": prompt_sistema},
-            {"role": "user", "content": comando_usuario}
-        ],
-        "temperature": 0.2
-    }
     try:
-        response = requests.post(url_completa, json=payload, headers=headers)
-        if response.status_code != 200:
-            return f"❌ Erro {response.status_code}: {response.text}"
+        # Inicializa o cliente usando a estrutura oficial compatível
+        client = OpenAI(
+            api_key=api_key.strip(),
+            base_url=endpoint_url.strip().rstrip('/')
+        )
         
-        dados_resposta = response.json()
-        
-        # EXTRATOR INTELIGENTE MULTICAMADAS CONTRA ERROS DE TIPO (LIST/STR)
-        if isinstance(dados_resposta, dict):
-            if 'choices' in dados_resposta and len(dados_resposta['choices']) > 0:
-                choice = dados_resposta['choices'][0]
-                if isinstance(choice, dict) and 'message' in choice:
-                    return choice['message']['content']
-        
-        if isinstance(dados_resposta, list) and len(dados_resposta) > 0:
-            if isinstance(dados_resposta[0], dict) and 'choices' in dados_resposta[0]:
-                return dados_resposta[0]['choices'][0]['message']['content']
-                
-        # Se o JSON vier plano ou direto
-        if 'text' in dados_resposta:
-            return dados_resposta['text']
-            
-        return str(dados_resposta)
+        response = client.chat.completions.create(
+            model=modelo_ia.strip(),
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": comando_usuario}
+            ],
+            temperature=0.2
+        )
+        return response.choices[0].message.content
     except Exception as e:
-        return f"❌ Erro ao extrair resposta da API: {str(e)}"
+        return f"❌ Erro de conexão com a API: {str(e)}"
 
 # --- FUNÇÃO DE PROCESSAMENTO EXCLUSIVA ---
 def processar_helena(resposta_ia):
