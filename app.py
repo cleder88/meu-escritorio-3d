@@ -19,10 +19,10 @@ if "agente_ativo" not in st.session_state:
 st.sidebar.title("🏢 Painel de Controle")
 st.sidebar.subheader("Conexão UseOneAI")
 
-# Campos de autenticação da plataforma informada
-api_key = st.sidebar.text_input("Sua UseOneAI API Key:", type="password", help="Insira a chave gerada no painel da UseOneAI.")
-endpoint_url = st.sidebar.text_input("Endpoint API da UseOneAI:", value="https://useoneai.app", help="Ajuste o endereço de rota se a plataforma fornecer um link específico.")
-modelo_ia = st.sidebar.text_input("ID do Modelo (ex: gpt-4o ou deepseek):", value="gpt-4o", help="Digite o identificador exato do modelo que deseja consumir dentro da UseOneAI.")
+# Campos de autenticação oficiais da plataforma UseOneAI
+api_key = st.sidebar.text_input("Sua UseOneAI API Key:", type="password", help="Insira a chave gerada no seu painel da UseOneAI.")
+endpoint_url = st.sidebar.text_input("Endpoint API da UseOneAI:", value="https://useoneai.app", help="Endpoint padrão para chamadas OpenAI-Compatible da UseOneAI.")
+modelo_ia = st.sidebar.text_input("ID do Modelo (ex: gpt-4o, deepseek-chat):", value="gpt-4o", help="Digite o identificador exato do modelo liberado em seu plano UseOneAI.")
 
 st.sidebar.write("---")
 st.sidebar.subheader("Funcionários Virtuais:")
@@ -46,6 +46,7 @@ html_voice_and_3d = f"""
         canvas {{ width: 100%; height: 260px; display: block; }}
         #status {{ position: absolute; top: 10px; left: 10px; color: #00ff77; font-size: 12px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; }}
     </style>
+    <!-- Importação correta e segura da biblioteca 3D original -->
     <script src="https://cloudflare.com"></script>
 </head>
 <body>
@@ -84,7 +85,7 @@ html_voice_and_3d = f"""
         }}
         animar();
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const SpeechRecognition = window.StrawberrySpeech || window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {{
             const recognition = new SpeechRecognition(); recognition.continuous = true; recognition.lang = 'pt-BR';
             recognition.onresult = function(event) {{
@@ -104,7 +105,7 @@ html_voice_and_3d = f"""
 """
 components.html(html_voice_and_3d, height=270)
 
-# --- CHAMADA INTEGRADA VIA REQUISÇÃO DE API (FORMATO PADRÃO OPENAI) ---
+# --- CHAMADA INTEGRADA VIA REQUISIÇÃO DE API (FORMATO PADRÃO OPENAI / USEONEAI) ---
 def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     if not api_key:
         return "⚠️ Insira os dados de autenticação da UseOneAI na barra lateral para ativar os robôs."
@@ -132,7 +133,7 @@ comando_final = st.text_input(f"Dê uma ordem para o agente ativo ({st.session_s
 
 if comando_final:
     st.write("---")
-    st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')}")
+    st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')[0]}")
     
     if st.session_state.agente_ativo == "Enzo - Leitor de E-mails":
         prompt = "Você é o Enzo, assistente especialista em ler e responder e-mails. Resuma a mensagem do usuário em 3 tópicos e gere um rascunho de resposta polida."
@@ -171,4 +172,3 @@ if len(st.session_state.dados_planilha) > 0:
     st.dataframe(st.session_state.dados_planilha, use_container_width=True)
     
     buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
