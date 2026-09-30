@@ -6,17 +6,11 @@ import requests
 import json
 
 # Configuração da página e layout expandido
-st.set_page_config(layout="wide", page_title="Meu Escritório Virtual - UseOneAI")
+st.set_page_config(layout="wide", page_title="Minha Secretária Virtual - Helena")
 
 # Inicialização do estado interno da aplicação
-if "dados_planilha" not in st.session_state:
-    st.session_state.dados_planilha = pd.DataFrame(columns=["Data", "Descrição", "Valor"])
-if "nome_planilha" not in st.session_state:
-    st.session_state.nome_planilha = "minha_planilha"
 if "agenda_compromissos" not in st.session_state:
     st.session_state.agenda_compromissos = pd.DataFrame(columns=["Data/Hora", "Compromisso", "Prioridade"])
-if "agente_ativo" not in st.session_state:
-    st.session_state.agente_ativo = "Enzo - Leitor de E-mails"
 
 # 1. BARRA LATERAL - CONFIGURAÇÃO DA USEONEAI
 st.sidebar.title("🏢 Painel de Controle")
@@ -27,16 +21,10 @@ endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://use
 modelo_ia = st.sidebar.text_input("ID do Modelo:", value="chatgpt-5.6-terra")
 
 st.sidebar.write("---")
-st.sidebar.subheader("Funcionários Virtuais:")
-agente_selecionado = st.sidebar.radio(
-    "Agente em foco:",
-    ["Enzo - Leitor de E-mails", "Sara - Especialista em Planilhas", "Murilo - Analista de Relatórios", "Helena - Secretária Executiva"],
-    index=["Enzo - Leitor de E-mails", "Sara - Especialista em Planilhas", "Murilo - Analista de Relatórios", "Helena - Secretária Executiva"].index(st.session_state.agente_ativo)
-)
-st.session_state.agente_ativo = agente_selecionado
+st.sidebar.info("**Agente Ativo:** Helena - Secretária Executiva\n\nResponsável pela organização da sua agenda de compromissos, triagem de horários e lembretes estruturados.")
 
 # 2. TELA CENTRAL - CENÁRIO INTERATIVO 3D + CAPTURA DE VOZ CONTÍNUA
-st.title("🖥️ Seu Escritório Virtual Inteligente")
+st.title("🖥️ Helena — Sua Secretária Executiva Virtual")
 
 html_voice_and_3d = f"""
 <!DOCTYPE html>
@@ -46,19 +34,19 @@ html_voice_and_3d = f"""
     <style>
         body {{ margin: 0; overflow: hidden; background-color: #111; font-family: sans-serif; }}
         canvas {{ width: 100%; height: 260px; display: block; }}
-        #status {{ position: absolute; top: 10px; left: 10px; color: #00ff77; font-size: 12px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; }}
+        #status {{ position: absolute; top: 10px; left: 10px; color: #aa00ff; font-size: 12px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; font-weight: bold; }}
     </style>
     <script src="https://cloudflare.com"></script>
 </head>
 <body>
-    <div id="status">🎙️ Microfone Ativo: Ouvindo comandos...</div>
+    <div id="status">🎙️ Helena está ouvindo... (Diga "Helena..." para agendar)</div>
     <script>
         const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0a0a0a);
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / 260, 0.1, 1000);
         camera.position.set(0, 8, 16); camera.lookAt(0, 0, 0);
         const renderer = new THREE.WebGLRenderer({{ antialias: true }});
         renderer.setSize(window.innerWidth, 260); document.body.appendChild(renderer.domElement);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
         const light = new THREE.DirectionalLight(0xffffff, 0.6); light.position.set(5, 15, 5); scene.add(light);
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 20), new THREE.MeshStandardMaterial({{ color: 0x1c1c1c }}));
         floor.rotation.x = -Math.PI / 2; scene.add(floor);
@@ -70,22 +58,18 @@ html_voice_and_3d = f"""
             grupo.position.set(x, 0, z); grupo.userData = {{ velX: (Math.random()-0.5)*0.03, velZ: (Math.random()-0.5)*0.03, mudar: 0, pulando: false, tempoPulo: 0 }};
             scene.add(grupo); return grupo;
         }}
-        const enzo = criarRobo(0x0077ff, -5, 0); 
-        const sara = criarRobo(0x00ff77, -1, -2); 
-        const murilo = criarRobo(0xff3333, 2, 1);
-        const helena = criarRobo(0xaa00ff, 5, -1);
+        // Apenas a Helena (Roxa) ativa no cenário
+        const helena = criarRobo(0xaa00ff, 0, 0);
 
         function animar() {{
             requestAnimationFrame(animate = () => {{
                 requestAnimationFrame(animate);
-                [enzo, sara, murilo, helena].forEach(r => {{
-                    r.userData.mudar++;
-                    if(r.userData.mudar > 150) {{ r.userData.velX = (Math.random()-0.5)*0.03; r.userData.velZ = (Math.random()-0.5)*0.03; r.userData.mudar = 0; }}
-                    r.position.x += r.userData.velX; r.position.z += r.userData.velZ;
-                    if(r.position.x > 13 || r.position.x < -13) r.userData.velX *= -1;
-                    if(r.position.z > 8 || r.position.z < -8) r.userData.velZ *= -1;
-                    if(r.userData.pulando) {{ r.userData.tempoPulo += 0.2; r.position.y = Math.abs(Math.sin(r.userData.tempoPulo)) * 1.5; if(r.userData.tempoPulo > Math.PI) {{ r.userData.pulando = false; r.position.y = 0; }} }}
-                }});
+                helena.userData.mudar++;
+                if(helena.userData.mudar > 150) {{ helena.userData.velX = (Math.random()-0.5)*0.03; helena.userData.velZ = (Math.random()-0.5)*0.03; helena.userData.mudar = 0; }}
+                helena.position.x += helena.userData.velX; helena.position.z += helena.userData.velZ;
+                if(helena.position.x > 13 || helena.position.x < -13) helena.userData.velX *= -1;
+                if(helena.position.z > 8 || helena.position.z < -8) helena.userData.velZ *= -1;
+                if(helena.userData.pulando) {{ helena.userData.tempoPulo += 0.2; helena.position.y = Math.abs(Math.sin(helena.userData.tempoPulo)) * 1.5; if(helena.userData.tempoPulo > Math.PI) {{ helena.userData.pulando = false; helena.position.y = 0; }} }}
                 renderer.render(scene, camera);
             }});
         }}
@@ -97,12 +81,10 @@ html_voice_and_3d = f"""
             recognition.onresult = function(event) {{
                 const resultado = event.results[event.results.length - 1].transcript.trim();
                 const textoMinusculo = resultado.toLowerCase();
-                let agenteDetectado = "";
-                if (textoMinusculo.startsWith("enzo")) {{ agenteDetectado = "Enzo - Leitor de E-mails"; enzo.userData.pulando = true; enzo.userData.tempoPulo = 0; }}
-                else if (textoMinusculo.startsWith("sara")) {{ agenteDetectado = "Sara - Especialista em Planilhas"; sara.userData.pulando = true; sara.userData.tempoPulo = 0; }}
-                else if (textoMinusculo.startsWith("murilo")) {{ agenteDetectado = "Murilo - Analista de Relatórios"; murilo.userData.pulando = true; murilo.userData.tempoPulo = 0; }}
-                else if (textoMinusculo.startsWith("helena")) {{ agenteDetectado = "Helena - Secretária Executiva"; helena.userData.pulando = true; helena.userData.tempoPulo = 0; }}
-                if (agenteDetectado !== "") {{ window.parent.postMessage({{type: 'streamlit:setComponentValue', value: {{ agente: agenteDetectado, comando: resultado }}}}, '*'); }}
+                if (textoMinusculo.startsWith("helena")) {{ 
+                    helena.userData.pulando = true; helena.userData.tempoPulo = 0;
+                    window.parent.postMessage({{type: 'streamlit:setComponentValue', value: resultado}}, '*'); 
+                }}
             }};
             recognition.onend = function() {{ recognition.start(); }}; recognition.start();
         }}
@@ -132,19 +114,7 @@ def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     except Exception as e:
         return f"❌ Falha de rede: {str(e)}"
 
-# --- FUNÇÕES DE PROCESSAMENTO DOS AGENTES ---
-def processar_sara(resposta_ia):
-    try:
-        texto_limpo = resposta_ia.strip().replace("```json", "").replace("```", "")
-        dados_limpos = json.loads(texto_limpo)
-        novas_linhas = pd.DataFrame(dados_limpos["Linhas"])
-        st.session_state.dados_planilha = pd.concat([st.session_state.dados_planilha, novas_linhas], ignore_index=True)
-        if "NomePlanilha" in dados_limpos:
-            st.session_state.nome_planilha = dados_limpos["NomePlanilha"]
-        st.success("📊 Sara atualizou a planilha!")
-    except:
-        st.info(f"💁‍♀️ **Sara:** {resposta_ia}")
-
+# --- FUNÇÃO DE PROCESSAMENTO EXCLUSIVA ---
 def processar_helena(resposta_ia):
     try:
         texto_limpo = resposta_ia.strip().replace("```json", "").replace("```", "")
@@ -155,24 +125,18 @@ def processar_helena(resposta_ia):
     except:
         st.info(f"💁‍♀️ **Helena:** {resposta_ia}")
 
-# Caixa de Entrada por Texto
-comando_final = st.text_input(f"Dê uma ordem para o agente ativo ({st.session_state.agente_ativo}):")
+# Caixa de Entrada por Texto (ou comando de voz capturado)
+comando_final = st.text_input("Fale ou digite uma ordem para a Helena:")
 
 if comando_final:
     st.write("---")
-    st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')}")
-    
-    if st.session_state.agente_ativo == "Enzo - Leitor de E-mails":
-        prompt = "Você é o Enzo, especialista em e-mails. Resuma a mensagem em 3 tópicos e gere uma resposta profissional."
-        st.write(chamar_modelo_useoneai(prompt, comando_final))
-        
-    elif st.session_state.agente_ativo == "Sara - Especialista em Planilhas":
-        prompt = "Você é a Sara. Retorne estritamente um código JSON estruturado no formato: {\"NomePlanilha\": \"nome\", \"Linhas\": [{\"Data\": \"AAAA-MM-DD\", \"Descrição\": \"Texto\", \"Valor\": 0.0}]}"
-        resposta = chamar_modelo_useoneai(prompt, comando_final)
-        processar_sara(resposta)
-            
-    elif st.session_state.agente_ativo == "Murilo - Analista de Relatórios":
-        contexto_planilha = st.session_state.dados_planilha.to_string()
-        prompt = f"Você é o Murilo, analista estratégico. Baseado nestes dados:\n{contexto_planilha}\n\nMonte um relatório executivo."
-        st.write(chamar_modelo_useoneai(prompt, comando_final))
+    st.subheader("💬 Resposta de Helena")
+    prompt = "Você é a Helena, minha secretária executiva privada. O usuário vai ditar compromissos ou horários. Você deve processar o texto e retornar obrigatoriamente um objeto JSON puro no formato: {\"Compromissos\": [{\"DataHora\": \"DD/MM AAAA - HH:MM\", \"Compromisso\": \"Descrição\", \"Prioridade\": \"Alta/Média/Baixa\"}]}"
+    resposta = chamar_modelo_useoneai(prompt, comando_final)
+    processar_helena(resposta)
 
+# RENDERIZAÇÃO DA AGENDA (HELENA)
+if len(st.session_state.agenda_compromissos) > 0:
+    st.write("---")
+    st.subheader("📅 Sua Agenda de Compromissos Atualizada")
+    st.dataframe(st.session_state.agenda_compromissos, use_container_width=True)
