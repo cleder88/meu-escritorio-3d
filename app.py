@@ -22,10 +22,9 @@ if "agente_ativo" not in st.session_state:
 st.sidebar.title("🏢 Painel de Controle")
 st.sidebar.subheader("Conexão UseOneAI")
 
-# Campos de autenticação oficiais baseados no painel real da UseOneAI
-api_key = st.sidebar.text_input("Sua UseOneAI API Key:", type="password", help="Insira a chave gerada no seu painel da UseOneAI.")
-endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://useoneai.app", help="Base URL OpenAI-compatible fornecida pelo seu painel.")
-modelo_ia = st.sidebar.text_input("ID do Modelo:", value="chatgpt-5.6-terra", help="ID do modelo copiado diretamente do seu painel UseOneAI.")
+api_key = st.sidebar.text_input("Sua UseOneAI API Key:", type="password")
+endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://useoneai.app")
+modelo_ia = st.sidebar.text_input("ID do Modelo:", value="chatgpt-5.6-terra")
 
 st.sidebar.write("---")
 st.sidebar.subheader("Funcionários Virtuais:")
@@ -35,10 +34,6 @@ agente_selecionado = st.sidebar.radio(
     index=["Enzo - Leitor de E-mails", "Sara - Especialista em Planilhas", "Murilo - Analista de Relatórios", "Helena - Secretária Executiva"].index(st.session_state.agente_ativo)
 )
 st.session_state.agente_ativo = agente_selecionado
-
-# Descrições dinâmicas na barra lateral
-if st.session_state.agente_ativo == "Helena - Secretária Executiva":
-    st.sidebar.info("**Helena:** Responsável pela organização da sua agenda de compromissos, triagem de horários e lembretes estruturados.")
 
 # 2. TELA CENTRAL - CENÁRIO INTERATIVO 3D + CAPTURA DE VOZ CONTÍNUA
 st.title("🖥️ Seu Escritório Virtual Inteligente")
@@ -104,7 +99,7 @@ html_voice_and_3d = f"""
                 const textoMinusculo = resultado.toLowerCase();
                 let agenteDetectado = "";
                 if (textoMinusculo.startsWith("enzo")) {{ agenteDetectado = "Enzo - Leitor de E-mails"; enzo.userData.pulando = true; enzo.userData.tempoPulo = 0; }}
-                else if (textoMinusculo.startsWith("sara")) {{ agenteDetectado = "Sara - Specialist em Planilhas"; sara.userData.pulando = true; sara.userData.tempoPulo = 0; }}
+                else if (textoMinusculo.startsWith("sara")) {{ agenteDetectado = "Sara - Especialista em Planilhas"; sara.userData.pulando = true; sara.userData.tempoPulo = 0; }}
                 else if (textoMinusculo.startsWith("murilo")) {{ agenteDetectado = "Murilo - Analista de Relatórios"; murilo.userData.pulando = true; murilo.userData.tempoPulo = 0; }}
                 else if (textoMinusculo.startsWith("helena")) {{ agenteDetectado = "Helena - Secretária Executiva"; helena.userData.pulando = true; helena.userData.tempoPulo = 0; }}
                 if (agenteDetectado !== "") {{ window.parent.postMessage({{type: 'streamlit:setComponentValue', value: {{ agente: agenteDetectado, comando: resultado }}}}, '*'); }}
@@ -120,7 +115,7 @@ components.html(html_voice_and_3d, height=270)
 # --- REQUISIÇÃO PARA O GATEWAY USEONEAI ---
 def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     if not api_key:
-        return "⚠️ Insira os dados de autenticação da UseOneAI na barra lateral para ativar os robôs."
+        return "⚠️ Insira a API Key na barra lateral."
     base_url = endpoint_url.strip().rstrip('/')
     url_completa = f"{base_url}/chat/completions"
     headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
@@ -132,7 +127,7 @@ def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     try:
         response = requests.post(url_completa, json=payload, headers=headers)
         if response.status_code != 200:
-            return f"❌ Erro na UseOneAI (Código {response.status_code}). Detalhes: {response.text}"
+            return f"❌ Erro {response.status_code}: {response.text}"
         return response.json()['choices']['message']['content']
     except Exception as e:
         return f"❌ Falha de rede: {str(e)}"
@@ -142,19 +137,16 @@ comando_final = st.text_input(f"Dê uma ordem para o agente ativo ({st.session_s
 
 if comando_final:
     st.write("---")
-    st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')}")
+    st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')[0]}")
     
+    # Execução do Enzo
     if st.session_state.agente_ativo == "Enzo - Leitor de E-mails":
         prompt = "Você é o Enzo, especialista em e-mails. Resuma a mensagem em 3 tópicos e gere uma resposta profissional."
-        resposta_enzo = chamar_modelo_useoneai(prompt, comando_final)
-        st.write(resposta_enzo)
+        st.write(chamar_modelo_useoneai(prompt, comando_final))
         
-    elif st.session_state.agente_ativo == "Sara - Especialista em Planilhas":
-        prompt = (
-            "Você é a Sara, assistente de dados. Filtre os dados fornecidos pelo usuário e retorne "
-            "estritamente um código JSON estruturado no formato abaixo, sem explicações textuais:\n"
-            '{"NomePlanilha": "nome_da_tabela", "Linhas": [{"Data": "AAAA-MM-DD", "Descrição": "Texto", "Valor": 0.0}]}'
-        )
+    # Execução da Sara
+    if st.session_state.agente_ativo == "Sara - Especialista em Planilhas":
+        prompt = "Você é a Sara. Retorne estritamente um código JSON estruturado no formato: {\"NomePlanilha\": \"nome\", \"Linhas\": [{\"Data\": \"AAAA-MM-DD\", \"Descrição\": \"Texto\", \"Valor\": 0.0}]}"
         resposta_bruta = chamar_modelo_useoneai(prompt, comando_final)
         try:
             texto_limpo = resposta_bruta.strip().replace("```json", "").replace("```", "")
@@ -163,8 +155,18 @@ if comando_final:
             st.session_state.dados_planilha = pd.concat([st.session_state.dados_planilha, novas_linhas], ignore_index=True)
             if "NomePlanilha" in dados_limpos: 
                 st.session_state.nome_planilha = dados_limpos["NomePlanilha"]
-            st.success("📊 Sara adicionou os novos dados à tabela!")
+            st.success("📊 Sara atualizou a planilha!")
         except:
-            st.info(f"💁‍♀️ **Sara (Texto):** {resposta_bruta}")
+            st.info(f"💁‍♀️ **Sara:** {resposta_bruta}")
             
-    elif st.session_state.agente_ativo == "Murilo - Analista de Relatórios":
+    # Execução do Murilo
+    if st.session_state.agente_ativo == "Murilo - Analista de Relatórios":
+        contexto_planilha = st.session_state.dados_planilha.to_string()
+        prompt = f"Você é o Murilo, analista estratégico. Baseado nestes dados:\n{contexto_planilha}\n\nMonte um relatório executivo."
+        st.write(chamar_modelo_useoneai(prompt, comando_final))
+
+    # Execução da Helena
+    if st.session_state.agente_ativo == "Helena - Secretária Executiva":
+        prompt = "Você é a Helena, secretária executiva. Retorne obrigatoriamente um objeto JSON puro no formato: {\"Compromissos\": [{\"DataHora\": \"DD/MM AAAA - HH:MM\", \"Compromisso\": \"Descrição\", \"Prioridade\": \"Alta/Média/Baixa\"}]}"
+        resposta_bruta = chamar_modelo_useoneai(prompt, comando_final)
+        try:
