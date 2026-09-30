@@ -137,15 +137,15 @@ comando_final = st.text_input(f"Dê uma ordem para o agente ativo ({st.session_s
 
 if comando_final:
     st.write("---")
-    st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')[0]}")
+    st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')}")
     
-    # Execução do Enzo
+    # 1. ENZO
     if st.session_state.agente_ativo == "Enzo - Leitor de E-mails":
         prompt = "Você é o Enzo, especialista em e-mails. Resuma a mensagem em 3 tópicos e gere uma resposta profissional."
         st.write(chamar_modelo_useoneai(prompt, comando_final))
         
-    # Execução da Sara
-    if st.session_state.agente_ativo == "Sara - Especialista em Planilhas":
+    # 2. SARA
+    elif st.session_state.agente_ativo == "Sara - Especialista em Planilhas":
         prompt = "Você é a Sara. Retorne estritamente um código JSON estruturado no formato: {\"NomePlanilha\": \"nome\", \"Linhas\": [{\"Data\": \"AAAA-MM-DD\", \"Descrição\": \"Texto\", \"Valor\": 0.0}]}"
         resposta_bruta = chamar_modelo_useoneai(prompt, comando_final)
         try:
@@ -159,14 +159,14 @@ if comando_final:
         except:
             st.info(f"💁‍♀️ **Sara:** {resposta_bruta}")
             
-    # Execução do Murilo
-    if st.session_state.agente_ativo == "Murilo - Analista de Relatórios":
+    # 3. MURILO
+    elif st.session_state.agente_ativo == "Murilo - Analista de Relatórios":
         contexto_planilha = st.session_state.dados_planilha.to_string()
         prompt = f"Você é o Murilo, analista estratégico. Baseado nestes dados:\n{contexto_planilha}\n\nMonte um relatório executivo."
         st.write(chamar_modelo_useoneai(prompt, comando_final))
 
-    # Execução da Helena
-    if st.session_state.agente_ativo == "Helena - Secretária Executiva":
+    # 4. HELENA
+    elif st.session_state.agente_ativo == "Helena - Secretária Executiva":
         prompt = "Você é a Helena, secretária executiva. Retorne obrigatoriamente um objeto JSON puro no formato: {\"Compromissos\": [{\"DataHora\": \"DD/MM AAAA - HH:MM\", \"Compromisso\": \"Descrição\", \"Prioridade\": \"Alta/Média/Baixa\"}]}"
         resposta_bruta = chamar_modelo_useoneai(prompt, comando_final)
         try:
