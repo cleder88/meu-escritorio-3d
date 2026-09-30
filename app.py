@@ -69,13 +69,12 @@ html_voice_and_3d = f"""
         floor.rotation.x = -Math.PI / 2; scene.add(floor);
 
         function criarRobo(cor, x, z) {{
-            const group = new THREE.Group();
-            const corpo = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.8), new THREE.MeshStandardMaterial({{ color: cor }})); corpo.position.y = 1; group.add(corpo);
-            const cabeca = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.6), new THREE.MeshStandardMaterial({{ color: 0xdddddd }})); cabeca.position.y = 1.9; group.add(cabeca);
-            group.position.set(x, 0, z); group.userData = {{ velX: (Math.random()-0.5)*0.03, velZ: (Math.random()-0.5)*0.03, mudar: 0, pulando: false, tempoPulo: 0 }};
-            scene.add(group); return group;
+            const grupo = new THREE.Group();
+            const corpo = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.8), new THREE.MeshStandardMaterial({{ color: cor }})); corpo.position.y = 1; grupo.add(corpo);
+            const cabeca = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.6), new THREE.MeshStandardMaterial({{ color: 0xdddddd }})); cabeca.position.y = 1.9; grupo.add(cabeca);
+            grupo.position.set(x, 0, z); grupo.userData = {{ velX: (Math.random()-0.5)*0.03, velZ: (Math.random()-0.5)*0.03, mudar: 0, pulando: false, tempoPulo: 0 }};
+            scene.add(grupo); return grupo;
         }}
-        // Configuração dos 4 robôs ativos (Helena adicionada em Roxo: 0xaa00ff)
         const enzo = criarRobo(0x0077ff, -5, 0); 
         const sara = criarRobo(0x00ff77, -1, -2); 
         const murilo = criarRobo(0xff3333, 2, 1);
@@ -105,7 +104,7 @@ html_voice_and_3d = f"""
                 const textoMinusculo = resultado.toLowerCase();
                 let agenteDetectado = "";
                 if (textoMinusculo.startsWith("enzo")) {{ agenteDetectado = "Enzo - Leitor de E-mails"; enzo.userData.pulando = true; enzo.userData.tempoPulo = 0; }}
-                else if (textoMinusculo.startsWith("sara")) {{ agenteDetectado = "Sara - Especialista em Planilhas"; sara.userData.pulando = true; sara.userData.tempoPulo = 0; }}
+                else if (textoMinusculo.startsWith("sara")) {{ agenteDetectado = "Sara - Specialist em Planilhas"; sara.userData.pulando = true; sara.userData.tempoPulo = 0; }}
                 else if (textoMinusculo.startsWith("murilo")) {{ agenteDetectado = "Murilo - Analista de Relatórios"; murilo.userData.pulando = true; murilo.userData.tempoPulo = 0; }}
                 else if (textoMinusculo.startsWith("helena")) {{ agenteDetectado = "Helena - Secretária Executiva"; helena.userData.pulando = true; helena.userData.tempoPulo = 0; }}
                 if (agenteDetectado !== "") {{ window.parent.postMessage({{type: 'streamlit:setComponentValue', value: {{ agente: agenteDetectado, comando: resultado }}}}, '*'); }}
@@ -147,7 +146,8 @@ if comando_final:
     
     if st.session_state.agente_ativo == "Enzo - Leitor de E-mails":
         prompt = "Você é o Enzo, especialista em e-mails. Resuma a mensagem em 3 tópicos e gere uma resposta profissional."
-        st.write(chamar_modelo_useoneai(prompt, comando_final))
+        resposta_enzo = chamar_modelo_useoneai(prompt, comando_final)
+        st.write(resposta_enzo)
         
     elif st.session_state.agente_ativo == "Sara - Especialista em Planilhas":
         prompt = (
@@ -161,7 +161,8 @@ if comando_final:
             dados_limpos = json.loads(texto_limpo)
             novas_linhas = pd.DataFrame(dados_limpos["Linhas"])
             st.session_state.dados_planilha = pd.concat([st.session_state.dados_planilha, novas_linhas], ignore_index=True)
-            if "NomePlanilha" in dados_limpos: st.session_state.nome_planilha = dados_limpos["NomePlanilha"]
+            if "NomePlanilha" in dados_limpos: 
+                st.session_state.nome_planilha = dados_limpos["NomePlanilha"]
             st.success("📊 Sara adicionou os novos dados à tabela!")
         except:
             st.info(f"💁‍♀️ **Sara (Texto):** {resposta_bruta}")
