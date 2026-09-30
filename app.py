@@ -13,6 +13,8 @@ if "dados_planilha" not in st.session_state:
     st.session_state.dados_planilha = pd.DataFrame(columns=["Data", "Descrição", "Valor"])
 if "nome_planilha" not in st.session_state:
     st.session_state.nome_planilha = "minha_planilha"
+if "agenda_compromissos" not in st.session_state:
+    st.session_state.agenda_compromissos = pd.DataFrame(columns=["Data/Hora", "Compromisso", "Prioridade"])
 if "agente_ativo" not in st.session_state:
     st.session_state.agente_ativo = "Enzo - Leitor de E-mails"
 
@@ -22,17 +24,21 @@ st.sidebar.subheader("Conexão UseOneAI")
 
 # Campos de autenticação oficiais baseados no painel real da UseOneAI
 api_key = st.sidebar.text_input("Sua UseOneAI API Key:", type="password", help="Insira a chave gerada no seu painel da UseOneAI.")
-endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://api.useoneai.app/v1", help="Base URL OpenAI-compatible fornecida pelo seu painel.")
+endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://useoneai.app", help="Base URL OpenAI-compatible fornecida pelo seu painel.")
 modelo_ia = st.sidebar.text_input("ID do Modelo:", value="chatgpt-5.6-terra", help="ID do modelo copiado diretamente do seu painel UseOneAI.")
 
 st.sidebar.write("---")
 st.sidebar.subheader("Funcionários Virtuais:")
 agente_selecionado = st.sidebar.radio(
     "Agente em foco:",
-    ["Enzo - Leitor de E-mails", "Sara - Especialista em Planilhas", "Murilo - Analista de Relatórios"],
-    index=["Enzo - Leitor de E-mails", "Sara - Especialista em Planilhas", "Murilo - Analista de Relatórios"].index(st.session_state.agente_ativo)
+    ["Enzo - Leitor de E-mails", "Sara - Especialista em Planilhas", "Murilo - Analista de Relatórios", "Helena - Secretária Executiva"],
+    index=["Enzo - Leitor de E-mails", "Sara - Especialista em Planilhas", "Murilo - Analista de Relatórios", "Helena - Secretária Executiva"].index(st.session_state.agente_ativo)
 )
 st.session_state.agente_ativo = agente_selecionado
+
+# Descrições dinâmicas na barra lateral
+if st.session_state.agente_ativo == "Helena - Secretária Executiva":
+    st.sidebar.info("**Helena:** Responsável pela organização da sua agenda de compromissos, triagem de horários e lembretes estruturados.")
 
 # 2. TELA CENTRAL - CENÁRIO INTERATIVO 3D + CAPTURA DE VOZ CONTÍNUA
 st.title("🖥️ Seu Escritório Virtual Inteligente")
@@ -63,18 +69,22 @@ html_voice_and_3d = f"""
         floor.rotation.x = -Math.PI / 2; scene.add(floor);
 
         function criarRobo(cor, x, z) {{
-            const grupo = new THREE.Group();
-            const corpo = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.8), new THREE.MeshStandardMaterial({{ color: cor }})); corpo.position.y = 1; grupo.add(corpo);
-            const cabeca = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.6), new THREE.MeshStandardMaterial({{ color: 0xdddddd }})); cabeca.position.y = 1.9; grupo.add(cabeca);
-            grupo.position.set(x, 0, z); grupo.userData = {{ velX: (Math.random()-0.5)*0.03, velZ: (Math.random()-0.5)*0.03, mudar: 0, pulando: false, tempoPulo: 0 }};
-            scene.add(grupo); return grupo;
+            const group = new THREE.Group();
+            const corpo = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.8), new THREE.MeshStandardMaterial({{ color: cor }})); corpo.position.y = 1; group.add(corpo);
+            const cabeca = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.6), new THREE.MeshStandardMaterial({{ color: 0xdddddd }})); cabeca.position.y = 1.9; group.add(cabeca);
+            group.position.set(x, 0, z); group.userData = {{ velX: (Math.random()-0.5)*0.03, velZ: (Math.random()-0.5)*0.03, mudar: 0, pulando: false, tempoPulo: 0 }};
+            scene.add(group); return group;
         }}
-        const enzo = criarRobo(0x0077ff, -4, 0); const sara = criarRobo(0x00ff77, 0, -2); const murilo = criarRobo(0xff3333, 4, 1);
+        // Configuração dos 4 robôs ativos (Helena adicionada em Roxo: 0xaa00ff)
+        const enzo = criarRobo(0x0077ff, -5, 0); 
+        const sara = criarRobo(0x00ff77, -1, -2); 
+        const murilo = criarRobo(0xff3333, 2, 1);
+        const helena = criarRobo(0xaa00ff, 5, -1);
 
         function animar() {{
             requestAnimationFrame(animate = () => {{
                 requestAnimationFrame(animate);
-                [enzo, sara, murilo].forEach(r => {{
+                [enzo, sara, murilo, helena].forEach(r => {{
                     r.userData.mudar++;
                     if(r.userData.mudar > 150) {{ r.userData.velX = (Math.random()-0.5)*0.03; r.userData.velZ = (Math.random()-0.5)*0.03; r.userData.mudar = 0; }}
                     r.position.x += r.userData.velX; r.position.z += r.userData.velZ;
@@ -97,6 +107,7 @@ html_voice_and_3d = f"""
                 if (textoMinusculo.startsWith("enzo")) {{ agenteDetectado = "Enzo - Leitor de E-mails"; enzo.userData.pulando = true; enzo.userData.tempoPulo = 0; }}
                 else if (textoMinusculo.startsWith("sara")) {{ agenteDetectado = "Sara - Especialista em Planilhas"; sara.userData.pulando = true; sara.userData.tempoPulo = 0; }}
                 else if (textoMinusculo.startsWith("murilo")) {{ agenteDetectado = "Murilo - Analista de Relatórios"; murilo.userData.pulando = true; murilo.userData.tempoPulo = 0; }}
+                else if (textoMinusculo.startsWith("helena")) {{ agenteDetectado = "Helena - Secretária Executiva"; helena.userData.pulando = true; helena.userData.tempoPulo = 0; }}
                 if (agenteDetectado !== "") {{ window.parent.postMessage({{type: 'streamlit:setComponentValue', value: {{ agente: agenteDetectado, comando: resultado }}}}, '*'); }}
             }};
             recognition.onend = function() {{ recognition.start(); }}; recognition.start();
@@ -107,45 +118,25 @@ html_voice_and_3d = f"""
 """
 components.html(html_voice_and_3d, height=270)
 
-# --- REQUISIÇÃO TOTALMENTE FLEXÍVEL PARA EVITAR ERROS DE PROPRIEDADE ---
+# --- REQUISIÇÃO PARA O GATEWAY USEONEAI ---
 def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     if not api_key:
         return "⚠️ Insira os dados de autenticação da UseOneAI na barra lateral para ativar os robôs."
-    
     base_url = endpoint_url.strip().rstrip('/')
     url_completa = f"{base_url}/chat/completions"
-    
-    headers = {
-        "Authorization": f"Bearer {api_key.strip()}",
-        "Content-Type": "application/json"
-    }
+    headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
     payload = {
         "model": modelo_ia.strip(),
-        "messages": [
-            {"role": "system", "content": prompt_sistema},
-            {"role": "user", "content": comando_usuario}
-        ],
+        "messages": [{"role": "system", "content": prompt_sistema}, {"role": "user", "content": comando_usuario}],
         "temperature": 0.2
     }
     try:
         response = requests.post(url_completa, json=payload, headers=headers)
         if response.status_code != 200:
             return f"❌ Erro na UseOneAI (Código {response.status_code}). Detalhes: {response.text}"
-        
-        dados_resposta = response.json()
-        
-        # EXTRATOR FLEXÍVEL: Valida o tipo de retorno estruturado da UseOneAI
-        if isinstance(dados_resposta, list):
-            # Se retornar como lista pura
-            return dados_resposta[0]['choices']['message']['content']
-        elif 'choices' in dados_resposta and isinstance(dados_resposta['choices'], list):
-            # Formato padrão OpenAI
-            return dados_resposta['choices'][0]['message']['content']
-        else:
-            return f"❌ Resposta em formato inesperado da API: {str(dados_resposta)}"
-            
+        return response.json()['choices']['message']['content']
     except Exception as e:
-        return f"❌ Falha interna ao processar resposta: {str(e)}"
+        return f"❌ Falha de rede: {str(e)}"
 
 # Caixa de Entrada por Texto
 comando_final = st.text_input(f"Dê uma ordem para o agente ativo ({st.session_state.agente_ativo}):")
@@ -165,18 +156,14 @@ if comando_final:
             '{"NomePlanilha": "nome_da_tabela", "Linhas": [{"Data": "AAAA-MM-DD", "Descrição": "Texto", "Valor": 0.0}]}'
         )
         resposta_bruta = chamar_modelo_useoneai(prompt, comando_final)
-        
-        if "❌" in resposta_bruta or "⚠️" in resposta_bruta:
-            st.error(resposta_bruta)
-        else:
-            try:
-                texto_limpo = resposta_bruta.strip().replace("```json", "").replace("```", "")
-                dados_limpos = json.loads(texto_limpo)
-                novas_linhas = pd.DataFrame(dados_limpos["Linhas"])
-                st.session_state.dados_planilha = pd.concat([st.session_state.dados_planilha, novas_linhas], ignore_index=True)
-                if "NomePlanilha" in dados_limpos: 
-                    st.session_state.nome_planilha = dados_limpos["NomePlanilha"]
-                st.success("📊 Sara adicionou os novos dados à tabela!")
-            except:
-                st.info(f"💁‍♀️ **Sara (Texto):** {resposta_bruta}")
+        try:
+            texto_limpo = resposta_bruta.strip().replace("```json", "").replace("```", "")
+            dados_limpos = json.loads(texto_limpo)
+            novas_linhas = pd.DataFrame(dados_limpos["Linhas"])
+            st.session_state.dados_planilha = pd.concat([st.session_state.dados_planilha, novas_linhas], ignore_index=True)
+            if "NomePlanilha" in dados_limpos: st.session_state.nome_planilha = dados_limpos["NomePlanilha"]
+            st.success("📊 Sara adicionou os novos dados à tabela!")
+        except:
+            st.info(f"💁‍♀️ **Sara (Texto):** {resposta_bruta}")
             
+    elif st.session_state.agente_ativo == "Murilo - Analista de Relatórios":
