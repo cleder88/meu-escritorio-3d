@@ -17,7 +17,8 @@ st.sidebar.title("🏢 Painel de Controle")
 st.sidebar.subheader("Conexão UseOneAI")
 
 api_key = st.sidebar.text_input("Sua UseOneAI API Key:", type="password")
-endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://useoneai.app")
+# ENDPOINT ATUALIZADO PARA DOMÍNIO .COM:
+endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://useoneai.com")
 modelo_ia = st.sidebar.text_input("ID do Modelo:", value="chatgpt-5.6-terra")
 
 st.sidebar.write("---")
@@ -58,7 +59,6 @@ html_voice_and_3d = f"""
             grupo.position.set(x, 0, z); grupo.userData = {{ velX: (Math.random()-0.5)*0.03, velZ: (Math.random()-0.5)*0.03, mudar: 0, pulando: false, tempoPulo: 0 }};
             scene.add(grupo); return grupo;
         }}
-        // Apenas a Helena (Roxa) ativa no cenário
         const helena = criarRobo(0xaa00ff, 0, 0);
 
         function animar() {{
@@ -125,7 +125,7 @@ def processar_helena(resposta_ia):
     except:
         st.info(f"💁‍♀️ **Helena:** {resposta_ia}")
 
-# Caixa de Entrada por Texto (ou comando de voz capturado)
+# Caixa de Entrada por Texto
 comando_final = st.text_input("Fale ou digite uma ordem para a Helena:")
 
 if comando_final:
