@@ -17,8 +17,8 @@ st.sidebar.title("🏢 Painel de Controle")
 st.sidebar.subheader("Conexão UseOneAI")
 
 api_key = st.sidebar.text_input("Sua UseOneAI API Key:", type="password")
-# ENDPOINT ATUALIZADO PARA DOMÍNIO .COM:
-endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://useoneai.com")
+# ROTA ABSOLUTA CORRIGIDA CONTRA ERROS DE SSL PROTOCOL:
+endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://useoneai.app")
 modelo_ia = st.sidebar.text_input("ID do Modelo:", value="chatgpt-5.6-terra")
 
 st.sidebar.write("---")
@@ -98,12 +98,22 @@ components.html(html_voice_and_3d, height=270)
 def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     if not api_key:
         return "⚠️ Insira a API Key na barra lateral."
+    
     base_url = endpoint_url.strip().rstrip('/')
     url_completa = f"{base_url}/chat/completions"
-    headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
+    
+    # Adicionado cabeçalho User-Agent para evitar rejeição por firewalls
+    headers = {
+        "Authorization": f"Bearer {api_key.strip()}",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
     payload = {
         "model": modelo_ia.strip(),
-        "messages": [{"role": "system", "content": prompt_sistema}, {"role": "user", "content": comando_usuario}],
+        "messages": [
+            {"role": "system", "content": prompt_sistema},
+            {"role": "user", "content": comando_usuario}
+        ],
         "temperature": 0.2
     }
     try:
@@ -112,7 +122,7 @@ def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
             return f"❌ Erro {response.status_code}: {response.text}"
         return response.json()['choices']['message']['content']
     except Exception as e:
-        return f"❌ Falha de rede: {str(e)}"
+        return f"❌ Falha de rede no handshake SSL. Detalhes: {str(e)}"
 
 # --- FUNÇÃO DE PROCESSAMENTO EXCLUSIVA ---
 def processar_helena(resposta_ia):
