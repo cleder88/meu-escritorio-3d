@@ -17,7 +17,6 @@ st.sidebar.title("🏢 Painel de Controle")
 st.sidebar.subheader("Conexão UseOneAI")
 
 api_key = st.sidebar.text_input("Sua UseOneAI API Key:", type="password")
-# ROTA ABSOLUTA CORRIGIDA CONTRA ERROS DE SSL PROTOCOL:
 endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://useoneai.app")
 modelo_ia = st.sidebar.text_input("ID do Modelo:", value="chatgpt-5.6-terra")
 
@@ -102,11 +101,10 @@ def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     base_url = endpoint_url.strip().rstrip('/')
     url_completa = f"{base_url}/chat/completions"
     
-    # Adicionado cabeçalho User-Agent para evitar rejeição por firewalls
     headers = {
         "Authorization": f"Bearer {api_key.strip()}",
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        "User-Agent": "Mozilla/5.0"
     }
     payload = {
         "model": modelo_ia.strip(),
@@ -120,9 +118,27 @@ def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
         response = requests.post(url_completa, json=payload, headers=headers)
         if response.status_code != 200:
             return f"❌ Erro {response.status_code}: {response.text}"
-        return response.json()['choices']['message']['content']
+        
+        dados_resposta = response.json()
+        
+        # EXTRATOR INTELIGENTE MULTICAMADAS CONTRA ERROS DE TIPO (LIST/STR)
+        if isinstance(dados_resposta, dict):
+            if 'choices' in dados_resposta and len(dados_resposta['choices']) > 0:
+                choice = dados_resposta['choices'][0]
+                if isinstance(choice, dict) and 'message' in choice:
+                    return choice['message']['content']
+        
+        if isinstance(dados_resposta, list) and len(dados_resposta) > 0:
+            if isinstance(dados_resposta[0], dict) and 'choices' in dados_resposta[0]:
+                return dados_resposta[0]['choices'][0]['message']['content']
+                
+        # Se o JSON vier plano ou direto
+        if 'text' in dados_resposta:
+            return dados_resposta['text']
+            
+        return str(dados_resposta)
     except Exception as e:
-        return f"❌ Falha de rede no handshake SSL. Detalhes: {str(e)}"
+        return f"❌ Erro ao extrair resposta da API: {str(e)}"
 
 # --- FUNÇÃO DE PROCESSAMENTO EXCLUSIVA ---
 def processar_helena(resposta_ia):
