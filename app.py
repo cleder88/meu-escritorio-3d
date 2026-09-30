@@ -22,7 +22,6 @@ st.sidebar.subheader("Conexão UseOneAI")
 
 # Campos de autenticação oficiais baseados no painel real da UseOneAI
 api_key = st.sidebar.text_input("Sua UseOneAI API Key:", type="password", help="Insira a chave gerada no seu painel da UseOneAI.")
-# URL CORRIGIDA PARA O PADRÃO DA IMAGEM:
 endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://api.useoneai.app/v1", help="Base URL OpenAI-compatible fornecida pelo seu painel.")
 modelo_ia = st.sidebar.text_input("ID do Modelo:", value="chatgpt-5.6-terra", help="ID do modelo copiado diretamente do seu painel UseOneAI.")
 
@@ -108,12 +107,11 @@ html_voice_and_3d = f"""
 """
 components.html(html_voice_and_3d, height=270)
 
-# --- REQUISIÇÃO CORRIGIDA COM ROTA COMPLETA INTERNA ---
+# --- REQUISIÇÃO TOTALMENTE FLEXÍVEL PARA EVITAR ERROS DE PROPRIEDADE ---
 def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     if not api_key:
         return "⚠️ Insira os dados de autenticação da UseOneAI na barra lateral para ativar os robôs."
     
-    # Concatena a rota final obrigatória de forma segura ao endereço base da imagem
     base_url = endpoint_url.strip().rstrip('/')
     url_completa = f"{base_url}/chat/completions"
     
@@ -133,9 +131,21 @@ def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
         response = requests.post(url_completa, json=payload, headers=headers)
         if response.status_code != 200:
             return f"❌ Erro na UseOneAI (Código {response.status_code}). Detalhes: {response.text}"
-        return response.json()['choices']['message']['content']
+        
+        dados_resposta = response.json()
+        
+        # EXTRATOR FLEXÍVEL: Valida o tipo de retorno estruturado da UseOneAI
+        if isinstance(dados_resposta, list):
+            # Se retornar como lista pura
+            return dados_resposta[0]['choices']['message']['content']
+        elif 'choices' in dados_resposta and isinstance(dados_resposta['choices'], list):
+            # Formato padrão OpenAI
+            return dados_resposta['choices'][0]['message']['content']
+        else:
+            return f"❌ Resposta em formato inesperado da API: {str(dados_resposta)}"
+            
     except Exception as e:
-        return f"❌ Falha de rede: {str(e)}"
+        return f"❌ Falha interna ao processar resposta: {str(e)}"
 
 # Caixa de Entrada por Texto
 comando_final = st.text_input(f"Dê uma ordem para o agente ativo ({st.session_state.agente_ativo}):")
@@ -170,11 +180,3 @@ if comando_final:
             except:
                 st.info(f"💁‍♀️ **Sara (Texto):** {resposta_bruta}")
             
-    elif st.session_state.agente_ativo == "Murilo - Analista de Relatórios":
-        contexto_planilha = st.session_state.dados_planilha.to_string()
-        prompt = f"Você é o Murilo, analista estratégico. Baseado nestes dados:\n{contexto_planilha}\n\nMonte um relatório executivo apontando falhas e planos de ação."
-        st.write(chamar_modelo_useoneai(prompt, comando_final))
-
-# RENDERIZAÇÃO DA PLANILHA EM MEMÓRIA
-if len(st.session_state.dados_planilha) > 0:
-    st.write("---")
