@@ -20,10 +20,11 @@ if "agente_ativo" not in st.session_state:
 st.sidebar.title("🏢 Painel de Controle")
 st.sidebar.subheader("Conexão UseOneAI")
 
-# Campos de autenticação oficiais da plataforma UseOneAI
+# Campos de autenticação oficiais baseados no painel real da UseOneAI
 api_key = st.sidebar.text_input("Sua UseOneAI API Key:", type="password", help="Insira a chave gerada no seu painel da UseOneAI.")
-endpoint_url = st.sidebar.text_input("Endpoint API da UseOneAI:", value="https://useoneai.app", help="Endpoint oficial para chamadas OpenAI-Compatible da UseOneAI.")
-modelo_ia = st.sidebar.text_input("ID do Modelo (ex: gpt-4o, deepseek-chat):", value="gpt-4o", help="Digite o identificador exato do modelo liberado em seu plano UseOneAI.")
+# URL CORRIGIDA PARA O PADRÃO DA IMAGEM:
+endpoint_url = st.sidebar.text_input("Base URL da UseOneAI:", value="https://api.useoneai.app/v1", help="Base URL OpenAI-compatible fornecida pelo seu painel.")
+modelo_ia = st.sidebar.text_input("ID do Modelo:", value="chatgpt-5.6-terra", help="ID do modelo copiado diretamente do seu painel UseOneAI.")
 
 st.sidebar.write("---")
 st.sidebar.subheader("Funcionários Virtuais:")
@@ -107,10 +108,14 @@ html_voice_and_3d = f"""
 """
 components.html(html_voice_and_3d, height=270)
 
-# --- REQUISIÇÃO PROTEGIDA CONTRA ERROS DE FORMATO ---
+# --- REQUISIÇÃO CORRIGIDA COM ROTA COMPLETA INTERNA ---
 def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     if not api_key:
         return "⚠️ Insira os dados de autenticação da UseOneAI na barra lateral para ativar os robôs."
+    
+    # Concatena a rota final obrigatória de forma segura ao endereço base da imagem
+    base_url = endpoint_url.strip().rstrip('/')
+    url_completa = f"{base_url}/chat/completions"
     
     headers = {
         "Authorization": f"Bearer {api_key.strip()}",
@@ -125,9 +130,9 @@ def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
         "temperature": 0.2
     }
     try:
-        response = requests.post(endpoint_url.strip(), json=payload, headers=headers)
+        response = requests.post(url_completa, json=payload, headers=headers)
         if response.status_code != 200:
-            return f"❌ Erro na UseOneAI (Código {response.status_code}). Chave ou modelo inválidos."
+            return f"❌ Erro na UseOneAI (Código {response.status_code}). Detalhes: {response.text}"
         return response.json()['choices']['message']['content']
     except Exception as e:
         return f"❌ Falha de rede: {str(e)}"
@@ -137,7 +142,7 @@ comando_final = st.text_input(f"Dê uma ordem para o agente ativo ({st.session_s
 
 if comando_final:
     st.write("---")
-    st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')[0]}")
+    st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')}")
     
     if st.session_state.agente_ativo == "Enzo - Leitor de E-mails":
         prompt = "Você é o Enzo, especialista em e-mails. Resuma a mensagem em 3 tópicos e gere uma resposta profissional."
@@ -155,7 +160,6 @@ if comando_final:
             st.error(resposta_bruta)
         else:
             try:
-                # Tratamento de string limpa
                 texto_limpo = resposta_bruta.strip().replace("```json", "").replace("```", "")
                 dados_limpos = json.loads(texto_limpo)
                 novas_linhas = pd.DataFrame(dados_limpos["Linhas"])
@@ -174,6 +178,3 @@ if comando_final:
 # RENDERIZAÇÃO DA PLANILHA EM MEMÓRIA
 if len(st.session_state.dados_planilha) > 0:
     st.write("---")
-    st.subheader(f"📊 Planilha em Edição: `{st.session_state.nome_planilha}.xlsx`")
-    st.dataframe(st.session_state.dados_planilha, use_container_width=True)
-    
