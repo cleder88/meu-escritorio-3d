@@ -3,6 +3,7 @@ import streamlit.components.v1 as components
 import pandas as pd
 import io
 import requests
+import json
 
 # Configuração da página e layout expandido
 st.set_page_config(layout="wide", page_title="Meu Escritório Virtual - UseOneAI")
@@ -21,7 +22,7 @@ st.sidebar.subheader("Conexão UseOneAI")
 
 # Campos de autenticação oficiais da plataforma UseOneAI
 api_key = st.sidebar.text_input("Sua UseOneAI API Key:", type="password", help="Insira a chave gerada no seu painel da UseOneAI.")
-endpoint_url = st.sidebar.text_input("Endpoint API da UseOneAI:", value="https://useoneai.app", help="Endpoint padrão para chamadas OpenAI-Compatible da UseOneAI.")
+endpoint_url = st.sidebar.text_input("Endpoint API da UseOneAI:", value="https://useoneai.app", help="Endpoint oficial para chamadas OpenAI-Compatible da UseOneAI.")
 modelo_ia = st.sidebar.text_input("ID do Modelo (ex: gpt-4o, deepseek-chat):", value="gpt-4o", help="Digite o identificador exato do modelo liberado em seu plano UseOneAI.")
 
 st.sidebar.write("---")
@@ -46,7 +47,6 @@ html_voice_and_3d = f"""
         canvas {{ width: 100%; height: 260px; display: block; }}
         #status {{ position: absolute; top: 10px; left: 10px; color: #00ff77; font-size: 12px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; }}
     </style>
-    <!-- Importação correta e segura da biblioteca 3D original -->
     <script src="https://cloudflare.com"></script>
 </head>
 <body>
@@ -72,20 +72,22 @@ html_voice_and_3d = f"""
         const enzo = criarRobo(0x0077ff, -4, 0); const sara = criarRobo(0x00ff77, 0, -2); const murilo = criarRobo(0xff3333, 4, 1);
 
         function animar() {{
-            requestAnimationFrame(animar);
-            [enzo, sara, murilo].forEach(r => {{
-                r.userData.mudar++;
-                if(r.userData.mudar > 150) {{ r.userData.velX = (Math.random()-0.5)*0.03; r.userData.velZ = (Math.random()-0.5)*0.03; r.userData.mudar = 0; }}
-                r.position.x += r.userData.velX; r.position.z += r.userData.velZ;
-                if(r.position.x > 13 || r.position.x < -13) r.userData.velX *= -1;
-                if(r.position.z > 8 || r.position.z < -8) r.userData.velZ *= -1;
-                if(r.userData.pulando) {{ r.userData.tempoPulo += 0.2; r.position.y = Math.abs(Math.sin(r.userData.tempoPulo)) * 1.5; if(r.userData.tempoPulo > Math.PI) {{ r.userData.pulando = false; r.position.y = 0; }} }}
+            requestAnimationFrame(animate = () => {{
+                requestAnimationFrame(animate);
+                [enzo, sara, murilo].forEach(r => {{
+                    r.userData.mudar++;
+                    if(r.userData.mudar > 150) {{ r.userData.velX = (Math.random()-0.5)*0.03; r.userData.velZ = (Math.random()-0.5)*0.03; r.userData.mudar = 0; }}
+                    r.position.x += r.userData.velX; r.position.z += r.userData.velZ;
+                    if(r.position.x > 13 || r.position.x < -13) r.userData.velX *= -1;
+                    if(r.position.z > 8 || r.position.z < -8) r.userData.velZ *= -1;
+                    if(r.userData.pulando) {{ r.userData.tempoPulo += 0.2; r.position.y = Math.abs(Math.sin(r.userData.tempoPulo)) * 1.5; if(r.userData.tempoPulo > Math.PI) {{ r.userData.pulando = false; r.position.y = 0; }} }}
+                }});
+                renderer.render(scene, camera);
             }});
-            renderer.render(scene, camera);
         }}
         animar();
 
-        const SpeechRecognition = window.StrawberrySpeech || window.SpeechRecognition || window.webkitSpeechRecognition;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {{
             const recognition = new SpeechRecognition(); recognition.continuous = true; recognition.lang = 'pt-BR';
             recognition.onresult = function(event) {{
@@ -105,30 +107,36 @@ html_voice_and_3d = f"""
 """
 components.html(html_voice_and_3d, height=270)
 
-# --- CHAMADA INTEGRADA VIA REQUISIÇÃO DE API (FORMATO PADRÃO OPENAI / USEONEAI) ---
+# --- REQUISIÇÃO PROTEGIDA CONTRA ERROS DE FORMATO DA USEONEAI ---
 def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     if not api_key:
         return "⚠️ Insira os dados de autenticação da UseOneAI na barra lateral para ativar os robôs."
     
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "Authorization": f"Bearer {api_key.strip()}",
         "Content-Type": "application/json"
     }
     payload = {
-        "model": modelo_ia,
+        "model": modelo_ia.strip(),
         "messages": [
             {"role": "system", "content": prompt_sistema},
             {"role": "user", "content": comando_usuario}
         ],
-        "temperature": 0.3
+        "temperature": 0.2
     }
     try:
-        response = requests.post(endpoint_url, json=payload, headers=headers)
-        return response.json()['choices']['message']['content']
+        response = requests.post(endpoint_url.strip(), json=payload, headers=headers)
+        
+        # Se a UseOneAI recusar o token ou rota, exibe o código real do servidor para triagem
+        if response.status_code != 200:
+            return f"❌ Erro de Autenticação na UseOneAI (Código {response.status_code}). Verifique se sua chave API ou plano estão ativos."
+            
+        dados_resposta = response.json()
+        return dados_resposta['choices'][0]['message']['content']
     except Exception as e:
-        return f"❌ Conexão recusada com o gateway UseOneAI. Verifique a URL do endpoint e sua chave. ({str(e)})"
+        return f"❌ Falha de rede ou configuração no servidor da UseOneAI. Detalhes: {str(e)}"
 
-# Caixa de Entrada por Texto (Funciona igual ao comando capturado por voz)
+# Caixa de Entrada por Texto
 comando_final = st.text_input(f"Dê uma ordem para o agente ativo ({st.session_state.agente_ativo}):")
 
 if comando_final:
@@ -143,32 +151,26 @@ if comando_final:
     elif st.session_state.agente_ativo == "Sara - Especialista em Planilhas":
         prompt = (
             "Você é a Sara, assistente especialista em dados. O usuário vai ditar entradas para uma planilha. "
-            "Filtre os dados corporativos e monte obrigatoriamente um objeto JSON puro no formato: "
-            '{"NomePlanilha": "nome_da_tabela", "Linhas": [{"Data": "AAAA-MM-DD", "Descrição": "Texto", "Valor": 0.0}]}. '
-            "Não adicione textos explicativos fora do JSON."
+            "Filtre os dados e monte obrigatoriamente um objeto JSON puro no formato abaixo, sem qualquer texto explicativo antes ou depois:\n"
+            '{"NomePlanilha": "nome_da_tabela", "Linhas": [{"Data": "AAAA-MM-DD", "Descrição": "Texto", "Valor": 0.0}]}'
         )
-        resposta_json = chamar_modelo_useoneai(prompt, comando_final)
-        try:
-            import json
-            dados_limpos = json.loads(resposta_json.strip().replace("```json", "").replace("```", ""))
-            novas_linhas = pd.DataFrame(dados_limpos["Linhas"])
-            st.session_state.dados_planilha = pd.concat([st.session_state.dados_planilha, novas_linhas], ignore_index=True)
-            if "NomePlanilha" in dados_limpos: 
-                st.session_state.nome_planilha = dados_limpos["NomePlanilha"]
-            st.success("📊 Sara adicionou os novos dados à tabela!")
-        except:
-            st.info(f"💁‍♀️ **Sara:** {resposta_json}")
-            
-    elif st.session_state.agente_ativo == "Murilo - Analista de Relatórios":
-        contexto_planilha = st.session_state.dados_planilha.to_string()
-        prompt = f"Você é o Murilo, analista estratégico de negócios. Baseado nos dados vigentes da planilha:\n{contexto_planilha}\n\nAnalise o comando do usuário e elabore um relatório executivo apontando falhas e planos de ação."
-        resposta_murilo = chamar_modelo_useoneai(prompt, comando_final)
-        st.write(resposta_murilo)
-
-# RENDERIZAÇÃO DA PLANILHA EM MEMÓRIA
-if len(st.session_state.dados_planilha) > 0:
-    st.write("---")
-    st.subheader(f"📊 Planilha em Edição: `{st.session_state.nome_planilha}.xlsx`")
-    st.dataframe(st.session_state.dados_planilha, use_container_width=True)
-    
-    buffer = io.BytesIO()
+        resposta_bruta = chamar_modelo_useoneai(prompt, comando_final)
+        
+        if "❌" in resposta_bruta or "⚠️" in resposta_bruta:
+            st.error(resposta_bruta)
+        else:
+            try:
+                # Extrator inteligente: remove blocos de formatação markdown (```json ... ```) se a IA gerar
+                texto_limpo = resposta_bruta.strip()
+                if texto_limpo.startswith("```"):
+                    texto_limpo = texto_limpo.split("```")[1]
+                    if texto_limpo.startswith("json"):
+                        texto_limpo = texto_limpo[4:]
+                
+                dados_limpos = json.loads(texto_limpo.strip())
+                novas_linhas = pd.DataFrame(dados_limpos["Linhas"])
+                st.session_state.dados_planilha = pd.concat([st.session_state.dados_planilha, novas_linhas], ignore_index=True)
+                if "NomePlanilha" in dados_limpos: 
+                    st.session_state.nome_planilha = dados_limpos["NomePlanilha"]
+                st.success("📊 Sara adicionou os novos dados à tabela!")
+            except Exception as parse_error:
