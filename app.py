@@ -104,7 +104,7 @@ html_voice_and_3d = f"""
 """
 components.html(html_voice_and_3d, height=270)
 
-# --- CHAMADA INTEGRADA VIA REQUISÇÃO DE API (FORMATO PADRÃO OPENAI) ---
+# --- CHAMADA INTEGRADA VIA REQUISIÇÃO DE API (FORMATO PADRÃO OPENAI) ---
 def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     if not api_key:
         return "⚠️ Insira os dados de autenticação da UseOneAI na barra lateral para ativar os robôs."
@@ -136,7 +136,8 @@ if comando_final:
     
     if st.session_state.agente_ativo == "Enzo - Leitor de E-mails":
         prompt = "Você é o Enzo, assistente especialista em ler e responder e-mails. Resuma a mensagem do usuário em 3 tópicos e gere um rascunho de resposta polida."
-        st.write(chamar_modelo_useoneai(prompt, comando_final))
+        resposta_enzo = chamar_modelo_useoneai(prompt, comando_final)
+        st.write(resposta_enzo)
         
     elif st.session_state.agente_ativo == "Sara - Especialista em Planilhas":
         prompt = (
@@ -151,7 +152,8 @@ if comando_final:
             dados_limpos = json.loads(resposta_json.strip().replace("```json", "").replace("```", ""))
             novas_linhas = pd.DataFrame(dados_limpos["Linhas"])
             st.session_state.dados_planilha = pd.concat([st.session_state.dados_planilha, novas_linhas], ignore_index=True)
-            if "NomePlanilha" in dados_limpos: st.session_state.nome_planilha = dados_limpos["NomePlanilha"]
+            if "NomePlanilha" in dados_limpos: 
+                st.session_state.nome_planilha = dados_limpos["NomePlanilha"]
             st.success("📊 Sara adicionou os novos dados à tabela!")
         except:
             st.info(f"💁‍♀️ **Sara:** {resposta_json}")
@@ -159,7 +161,8 @@ if comando_final:
     elif st.session_state.agente_ativo == "Murilo - Analista de Relatórios":
         contexto_planilha = st.session_state.dados_planilha.to_string()
         prompt = f"Você é o Murilo, analista estratégico de negócios. Baseado nos dados vigentes da planilha:\n{contexto_planilha}\n\nAnalise o comando do usuário e elabore um relatório executivo apontando falhas e planos de ação."
-        st.write(chamar_modelo_useoneai(prompt, comando_final))
+        resposta_murilo = chamar_modelo_useoneai(prompt, comando_final)
+        st.write(resposta_murilo)
 
 # RENDERIZAÇÃO DA PLANILHA EM MEMÓRIA
 if len(st.session_state.dados_planilha) > 0:
@@ -169,6 +172,3 @@ if len(st.session_state.dados_planilha) > 0:
     
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        st.session_state.dados_planilha.to_excel(writer, index=False, sheet_name='Dados')
-    
-    st.download_button(
