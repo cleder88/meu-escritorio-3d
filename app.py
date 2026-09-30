@@ -87,7 +87,7 @@ html_voice_and_3d = f"""
         }}
         animar();
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const SpeechRecognition = window.StrawberrySpeech || window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {{
             const recognition = new SpeechRecognition(); recognition.continuous = true; recognition.lang = 'pt-BR';
             recognition.onresult = function(event) {{
@@ -107,7 +107,7 @@ html_voice_and_3d = f"""
 """
 components.html(html_voice_and_3d, height=270)
 
-# --- REQUISIÇÃO PROTEGIDA CONTRA ERROS DE FORMATO DA USEONEAI ---
+# --- REQUISIÇÃO PROTEGIDA CONTRA ERROS DE FORMATO ---
 def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     if not api_key:
         return "⚠️ Insira os dados de autenticação da UseOneAI na barra lateral para ativar os robôs."
@@ -126,15 +126,11 @@ def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     }
     try:
         response = requests.post(endpoint_url.strip(), json=payload, headers=headers)
-        
-        # Se a UseOneAI recusar o token ou rota, exibe o código real do servidor para triagem
         if response.status_code != 200:
-            return f"❌ Erro de Autenticação na UseOneAI (Código {response.status_code}). Verifique se sua chave API ou plano estão ativos."
-            
-        dados_resposta = response.json()
-        return dados_resposta['choices'][0]['message']['content']
+            return f"❌ Erro na UseOneAI (Código {response.status_code}). Chave ou modelo inválidos."
+        return response.json()['choices']['message']['content']
     except Exception as e:
-        return f"❌ Falha de rede ou configuração no servidor da UseOneAI. Detalhes: {str(e)}"
+        return f"❌ Falha de rede: {str(e)}"
 
 # Caixa de Entrada por Texto
 comando_final = st.text_input(f"Dê uma ordem para o agente ativo ({st.session_state.agente_ativo}):")
@@ -144,14 +140,13 @@ if comando_final:
     st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')[0]}")
     
     if st.session_state.agente_ativo == "Enzo - Leitor de E-mails":
-        prompt = "Você é o Enzo, assistente especialista em ler e responder e-mails. Resuma a mensagem do usuário em 3 tópicos e gere um rascunho de resposta polida."
-        resposta_enzo = chamar_modelo_useoneai(prompt, comando_final)
-        st.write(resposta_enzo)
+        prompt = "Você é o Enzo, especialista em e-mails. Resuma a mensagem em 3 tópicos e gere uma resposta profissional."
+        st.write(chamar_modelo_useoneai(prompt, comando_final))
         
     elif st.session_state.agente_ativo == "Sara - Especialista em Planilhas":
         prompt = (
-            "Você é a Sara, assistente especialista em dados. O usuário vai ditar entradas para uma planilha. "
-            "Filtre os dados e monte obrigatoriamente um objeto JSON puro no formato abaixo, sem qualquer texto explicativo antes ou depois:\n"
+            "Você é a Sara, assistente de dados. Filtre os dados fornecidos pelo usuário e retorne "
+            "estritamente um código JSON estruturado no formato abaixo, sem explicações textuais:\n"
             '{"NomePlanilha": "nome_da_tabela", "Linhas": [{"Data": "AAAA-MM-DD", "Descrição": "Texto", "Valor": 0.0}]}'
         )
         resposta_bruta = chamar_modelo_useoneai(prompt, comando_final)
@@ -160,17 +155,25 @@ if comando_final:
             st.error(resposta_bruta)
         else:
             try:
-                # Extrator inteligente: remove blocos de formatação markdown (```json ... ```) se a IA gerar
-                texto_limpo = resposta_bruta.strip()
-                if texto_limpo.startswith("```"):
-                    texto_limpo = texto_limpo.split("```")[1]
-                    if texto_limpo.startswith("json"):
-                        texto_limpo = texto_limpo[4:]
-                
-                dados_limpos = json.loads(texto_limpo.strip())
+                # Tratamento de string limpa
+                texto_limpo = resposta_bruta.strip().replace("```json", "").replace("```", "")
+                dados_limpos = json.loads(texto_limpo)
                 novas_linhas = pd.DataFrame(dados_limpos["Linhas"])
                 st.session_state.dados_planilha = pd.concat([st.session_state.dados_planilha, novas_linhas], ignore_index=True)
                 if "NomePlanilha" in dados_limpos: 
                     st.session_state.nome_planilha = dados_limpos["NomePlanilha"]
                 st.success("📊 Sara adicionou os novos dados à tabela!")
-            except Exception as parse_error:
+            except:
+                st.info(f"💁‍♀️ **Sara (Texto):** {resposta_bruta}")
+            
+    elif st.session_state.agente_ativo == "Murilo - Analista de Relatórios":
+        contexto_planilha = st.session_state.dados_planilha.to_string()
+        prompt = f"Você é o Murilo, analista estratégico. Baseado nestes dados:\n{contexto_planilha}\n\nMonte um relatório executivo apontando falhas e planos de ação."
+        st.write(chamar_modelo_useoneai(prompt, comando_final))
+
+# RENDERIZAÇÃO DA PLANILHA EM MEMÓRIA
+if len(st.session_state.dados_planilha) > 0:
+    st.write("---")
+    st.subheader(f"📊 Planilha em Edição: `{st.session_state.nome_planilha}.xlsx`")
+    st.dataframe(st.session_state.dados_planilha, use_container_width=True)
+    
