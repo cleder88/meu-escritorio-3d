@@ -104,7 +104,7 @@ html_voice_and_3d = f"""
 """
 components.html(html_voice_and_3d, height=270)
 
-# --- CHAMADA INTEGRADA VIA REQUISIÇÃO DE API (FORMATO PADRÃO OPENAI) ---
+# --- CHAMADA INTEGRADA VIA REQUISÇÃO DE API (FORMATO PADRÃO OPENAI) ---
 def chamar_modelo_useoneai(prompt_sistema, comando_usuario):
     if not api_key:
         return "⚠️ Insira os dados de autenticação da UseOneAI na barra lateral para ativar os robôs."
@@ -132,7 +132,7 @@ comando_final = st.text_input(f"Dê uma ordem para o agente ativo ({st.session_s
 
 if comando_final:
     st.write("---")
-    st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')[0]}")
+    st.subheader(f"💬 Resposta de {st.session_state.agente_ativo.split(' - ')}")
     
     if st.session_state.agente_ativo == "Enzo - Leitor de E-mails":
         prompt = "Você é o Enzo, assistente especialista em ler e responder e-mails. Resuma a mensagem do usuário em 3 tópicos e gere um rascunho de resposta polida."
